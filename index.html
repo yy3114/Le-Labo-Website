@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Le Labo 香水探索</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for the Inter font */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5; /* Light gray background */
+        }
+        /* Fade in/out transition for the details panel and selector */
+        .fade-transition {
+            transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+        }
+        .fade-hidden {
+            opacity: 0;
+            transform: translateY(20px);
+            pointer-events: none; /* Disable interaction when hidden */
+        }
+        .fade-visible {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto; /* Enable interaction when visible */
+        }
+        /* Enhanced styling for perfume selection buttons with 3D effect and colored borders */
+        .perfume-select-button {
+            @apply px-6 py-3 rounded-xl font-semibold text-base transition-all duration-200;
+            @apply bg-purple-500 text-white;
+            /* Base 3D shadow */
+            box-shadow: 0 6px 0 0 #6b46c1; /* Darker purple for "depth" */
+            transform: translateY(0);
+            @apply hover:bg-purple-600;
+            @apply focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-opacity-75;
+            @apply w-full sm:w-auto; /* Full width on small screens, auto on larger */
+            border: 2px solid transparent; /* Base transparent border */
+        }
+        .perfume-select-button:hover {
+            transform: translateY(-2px); /* Lift slightly on hover */
+            box-shadow: 0 8px 0 0 #6b46c1; /* Deeper shadow on hover */
+        }
+        .perfume-select-button.active,
+        .perfume-select-button:active {
+            transform: translateY(4px); /* Press down effect */
+            box-shadow: 0 2px 0 0 #6b46c1; /* Smaller shadow when pressed */
+            @apply bg-purple-700; /* Darker background when pressed */
+        }
+
+        /* Specific border colors for each perfume button */
+        [data-perfume-id="santal33"] { border-color: #d97706; /* Amber-600 */ }
+        [data-perfume-id="rose31"] { border-color: #ef4444; /* Red-500 */ }
+        [data-perfume-id="thenoir29"] { border-color: #4b5563; /* Gray-700 */ }
+        [data-perfume-id="bergamote22"] { border-color: #fbbf24; /* Yellow-400 */ }
+        [data-perfume-id="another13"] { border-color: #60a5fa; /* Blue-400 */ }
+        [data-perfume-id="lys41"] { border-color: #f472b6; /* Pink-400 */ }
+        [data-perfume-id="patchouli24"] { border-color: #22c55e; /* Green-500 */ }
+
+        /* Active state border color override */
+        .perfume-select-button.active {
+            border-color: white; /* White border when active */
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+    <div class="flex flex-col items-center justify-center w-full max-w-lg bg-white p-6 rounded-2xl shadow-xl">
+        <h1 class="text-3xl font-bold text-gray-800 mb-8 text-center">探索 Le Labo 香水之美</h1>
+
+        <!-- Perfume Bottle Image Container (Clickable Area) -->
+        <div id="perfumeBottleContainer" class="relative w-48 h-auto cursor-pointer transform transition-transform duration-300 hover:scale-105 mb-8">
+            <img src="https://i.postimg.cc/nzVJCLWL/Screenshot-20250709-065640.jpg" alt="香水瓶" class="w-full h-full object-contain rounded-xl shadow-lg">
+            <div class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 rounded-xl opacity-0 hover:opacity-100 transition-opacity duration-300">
+                <span class="text-white text-lg font-semibold">點擊選擇香水</span>
+            </div>
+        </div>
+
+        <!-- Perfume Selector Buttons (Initially hidden) -->
+        <div id="perfumeSelector" class="flex flex-wrap justify-center gap-4 mb-6 fade-transition fade-hidden w-full">
+            <button class="perfume-select-button" data-perfume-id="santal33">Santal 33</button>
+            <button class="perfume-select-button" data-perfume-id="rose31">Rose 31</button>
+            <button class="perfume-select-button" data-perfume-id="thenoir29">Thé Noir 29</button>
+            <button class="perfume-select-button" data-perfume-id="bergamote22">Bergamote 22</button>
+            <button class="perfume-select-button" data-perfume-id="another13">Another 13</button>
+            <button class="perfume-select-button" data-perfume-id="lys41">Lys 41</button>
+            <button class="perfume-select-button" data-perfume-id="patchouli24">Patchouli 24</button>
+        </div>
+
+        <!-- Perfume Details Panel (Initially hidden) -->
+        <div id="perfumeDetails" class="w-full fade-transition fade-hidden mt-6 bg-gradient-to-br from-purple-100 to-pink-100 p-6 rounded-2xl shadow-md border border-purple-200">
+            <h2 id="perfumeName" class="text-2xl font-semibold text-purple-800 mb-4 text-center"></h2>
+            <h3 class="text-xl font-semibold text-pink-700 mb-2 text-center">意涵</h3>
+            <p id="perfumeMeaning" class="text-gray-700 text-base leading-relaxed mb-6 text-center"></p>
+
+            <h3 class="text-xl font-semibold text-pink-700 mb-2 text-center">主要成分</h3>
+            <p id="perfumeIngredients" class="text-gray-700 text-base leading-relaxed text-center"></p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const perfumeBottleContainer = document.getElementById('perfumeBottleContainer');
+            const perfumeSelector = document.getElementById('perfumeSelector');
+            const perfumeDetails = document.getElementById('perfumeDetails');
+            const perfumeSelectButtons = document.querySelectorAll('.perfume-select-button');
+            const perfumeName = document.getElementById('perfumeName');
+            const perfumeMeaning = document.getElementById('perfumeMeaning');
+            const perfumeIngredients = document.getElementById('perfumeIngredients');
+
+            // Define perfume data for 7 scents
+            const perfumesData = {
+                'santal33': {
+                    name: 'Santal 33 (檀香)',
+                    meaning: '靈感來自美國西部，旨在捕捉堅毅而柔美、充滿懷舊煙燻感的自由精神。它是一款能喚起廣闊風景和篝火氣息的香水。',
+                    ingredients: '檀香、雪松、小荳蔻、鳶尾花、紫羅蘭、紙莎草、皮革、琥珀'
+                },
+                'rose31': {
+                    name: 'Rose 31 (玫瑰)',
+                    meaning: '打破傳統玫瑰的甜美形象，將其轉化為中性、深沉且富有木質和辛辣感的香氣，展現玫瑰的另一種力量與魅力。',
+                    ingredients: '玫瑰原精、小茴香、香根草、雪松、麝香、癒創木、乳香'
+                },
+                'thenoir29': {
+                    name: 'Thé Noir 29 (黑茶)',
+                    meaning: '頌揚茶葉的芳香，融合了深沉的茶葉、清新無花果與雪松的對比，帶來溫暖、沉穩而又充滿活力的感受，充滿神秘感。',
+                    ingredients: '佛手柑、無花果、月桂葉、雪松、香根草、麝香、菸草'
+                },
+                'bergamote22': {
+                    name: 'Bergamote 22 (佛手柑)',
+                    meaning: '一款明亮、充滿活力的柑橘香水，以其清爽的佛手柑為主調，同時帶有花香和木質的溫暖基調，平衡且持久。',
+                    ingredients: '佛手柑、葡萄柚、橙花、琥珀、麝香、雪松'
+                },
+                'another13': {
+                    name: 'Another 13 (孤獨)',
+                    meaning: '一款獨特且令人上癮的香氣，以合成龍涎香醚、茉莉和苔蘚為基調。它微妙、誘人，並能與穿戴者的肌膚完美融合，創造出個人化的氣味。',
+                    ingredients: '龍涎香醚 (Ambrox)、茉莉、苔蘚、黃葵籽、Iso E Super、Cetalox'
+                },
+                'lys41': {
+                    name: 'Lys 41 (百合)',
+                    meaning: '一款強勁而醉人的白色花束香氣，頌揚百合、晚香玉和茉莉的奢華與光芒四射的美麗，散發出純粹的女性魅力。',
+                    ingredients: '百合、晚香玉原精、茉莉、木質香、馬達加斯加香草、梔子花、麝香'
+                },
+                'patchouli24': {
+                    name: 'Patchouli 24 (廣藿香)',
+                    meaning: '對廣藿香的煙燻、皮革和強烈木質詮釋，擺脫了傳統廣藿香的刻板印象。它大膽、溫暖且神秘，充滿個性。',
+                    ingredients: '廣藿香、樺木、安息香、香草'
+                }
+            };
+
+            let isSelectorVisible = false; // Track selector visibility
+
+            // Function to update and show details panel
+            function updateDetails(perfumeId) {
+                const data = perfumesData[perfumeId];
+                if (data) {
+                    perfumeName.textContent = data.name;
+                    perfumeMeaning.textContent = data.meaning;
+                    perfumeIngredients.textContent = data.ingredients;
+
+                    // Ensure details panel is visible
+                    if (perfumeDetails.classList.contains('fade-hidden')) {
+                        perfumeDetails.classList.remove('fade-hidden');
+                        perfumeDetails.classList.add('fade-visible');
+                    }
+                }
+            }
+
+            // Handle click on the main perfume bottle image
+            perfumeBottleContainer.addEventListener('click', () => {
+                if (!isSelectorVisible) {
+                    // Show the selector and details (default to Santal 33)
+                    perfumeSelector.classList.remove('fade-hidden');
+                    perfumeSelector.classList.add('fade-visible');
+                    updateDetails('santal33'); // Default to Santal 33
+                    // Highlight the default button
+                    perfumeSelectButtons.forEach(btn => {
+                        if (btn.dataset.perfumeId === 'santal33') {
+                            btn.classList.add('active');
+                        } else {
+                            btn.classList.remove('active');
+                        }
+                    });
+                    isSelectorVisible = true;
+                } else {
+                    // Hide both selector and details
+                    perfumeSelector.classList.remove('fade-visible');
+                    perfumeSelector.classList.add('fade-hidden');
+                    perfumeDetails.classList.remove('fade-visible');
+                    perfumeDetails.classList.add('fade-hidden');
+                    // Remove active state from all buttons
+                    perfumeSelectButtons.forEach(btn => btn.classList.remove('active'));
+                    isSelectorVisible = false;
+                }
+            });
+
+            // Handle clicks on the perfume selection buttons
+            perfumeSelectButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const perfumeId = button.dataset.perfumeId;
+                    updateDetails(perfumeId);
+
+                    // Remove active class from all buttons
+                    perfumeSelectButtons.forEach(btn => btn.classList.remove('active'));
+                    // Add active class to the clicked button
+                    button.classList.add('active');
+                });
+            });
+        });
+    </script>
+</body>
+</html>
+
